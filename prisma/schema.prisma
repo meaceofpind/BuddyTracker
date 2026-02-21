@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Pet {
+  petId        String   @id @default(cuid())
+  name         String
+  gender       String
+  age          Int
+  species      String
+  breed        String
+  lastModified DateTime @default(now()) @updatedAt
+
+  trackers TrackerList[]
+  entries  TrackerEntry[]
+}
+
+model TrackerList {
+  id    Int    @id @default(autoincrement())
+  name  String
+  petId String
+
+  pet     Pet            @relation(fields: [petId], references: [petId], onDelete: Cascade)
+  options FormOption[]
+  entries TrackerEntry[]
+}
+
+model FormOption {
+  id        Int    @id @default(autoincrement())
+  fieldName String
+  fieldType String
+  trackerId Int
+
+  tracker TrackerList @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+}
+
+model TrackerEntry {
+  id        Int      @id @default(autoincrement())
+  trackerId Int
+  petId     String
+  createdAt DateTime @default(now())
+
+  tracker TrackerList       @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  pet     Pet               @relation(fields: [petId], references: [petId], onDelete: Cascade)
+  data    TrackerEntryData[]
+  images  TrackerEntryImage[]
+}
+
+model TrackerEntryData {
+  id         Int    @id @default(autoincrement())
+  fieldName  String
+  fieldType  String
+  fieldValue String
+  entryId    Int
+
+  entry TrackerEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+}
+
+model TrackerEntryImage {
+  id      Int    @id @default(autoincrement())
+  image   String
+  entryId Int
+
+  entry TrackerEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+}
