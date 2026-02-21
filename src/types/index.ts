@@ -5,7 +5,7 @@ import type {
   TrackerEntry,
   TrackerEntryData,
   TrackerEntryImage,
-} from "@prisma/client";
+} from "@/generated/prisma/client";
 
 export type { Pet, TrackerList, FormOption, TrackerEntry, TrackerEntryData, TrackerEntryImage };
 
