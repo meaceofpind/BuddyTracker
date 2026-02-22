@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import type { Pet } from "@/types";
 import {
   Card,
@@ -15,8 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Pencil, Trash2, PawPrint } from "lucide-react";
-import Link from "next/link";
+import { MoreVertical, Pencil, Trash2, PawPrint, ChevronRight } from "lucide-react";
 
 interface PetCardProps {
   pet: Pet;
@@ -24,12 +25,59 @@ interface PetCardProps {
   onDelete: (pet: Pet) => void;
 }
 
+const LONG_PRESS_MS = 500;
+
 export function PetCard({ pet, onEdit, onDelete }: PetCardProps) {
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const didLongPress = useRef(false);
+
+  const handleTouchStart = useCallback(() => {
+    didLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+      setMenuOpen(true);
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, LONG_PRESS_MS);
+  }, []);
+
+  const cancelLongPress = useCallback(() => {
+    clearTimeout(longPressTimer.current);
+  }, []);
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (didLongPress.current) {
+        didLongPress.current = false;
+        e.preventDefault();
+        return;
+      }
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-dropdown-trigger]") || target.closest("[role='menu']")) {
+        return;
+      }
+      router.push(`/pets/${pet.petId}/trackers`);
+    },
+    [router, pet.petId]
+  );
+
   return (
-    <Card className="group relative transition-shadow hover:shadow-lg">
+    <Card
+      className="group relative transition-shadow hover:shadow-lg cursor-pointer select-none touch-manipulation"
+      onClick={handleClick}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={cancelLongPress}
+      onTouchMove={cancelLongPress}
+      role="article"
+      aria-label={`${pet.name} — ${pet.species}, ${pet.breed}. Tap to view trackers, long press for options.`}
+    >
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10"
+            aria-hidden="true"
+          >
             <PawPrint className="h-5 w-5 text-primary" />
           </div>
           <div>
@@ -39,50 +87,61 @@ export function PetCard({ pet, onEdit, onDelete }: PetCardProps) {
             </CardDescription>
           </div>
         </div>
-        <DropdownMenu>
+
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button
+              data-dropdown-trigger
               variant="ghost"
               size="icon"
-              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-8 w-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+              aria-label={`Actions for ${pet.name}`}
+              onClick={(e) => e.stopPropagation()}
             >
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(pet)}>
-              <Pencil className="mr-2 h-4 w-4" />
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(pet);
+              }}
+            >
+              <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => onDelete(pet)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(pet);
+              }}
               className="text-destructive focus:text-destructive"
             >
-              <Trash2 className="mr-2 h-4 w-4" />
+              <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
+
       <CardContent>
-        <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+        <dl className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
           <div>
-            <span className="font-medium text-foreground">Gender:</span>{" "}
-            {pet.gender}
+            <dt className="inline font-medium text-foreground">Gender:</dt>{" "}
+            <dd className="inline">{pet.gender}</dd>
           </div>
           <div>
-            <span className="font-medium text-foreground">Age:</span> {pet.age}{" "}
-            {pet.age === 1 ? "year" : "years"}
+            <dt className="inline font-medium text-foreground">Age:</dt>{" "}
+            <dd className="inline">
+              {pet.age} {pet.age === 1 ? "year" : "years"}
+            </dd>
           </div>
+        </dl>
+        <div className="mt-3 flex items-center text-sm font-medium text-primary">
+          View Trackers
+          <ChevronRight className="ml-1 h-4 w-4" aria-hidden="true" />
         </div>
-        <Link
-          href={`/pets/${pet.petId}/trackers`}
-          className="mt-4 inline-flex w-full"
-        >
-          <Button variant="outline" className="w-full">
-            View Trackers
-          </Button>
-        </Link>
       </CardContent>
     </Card>
   );

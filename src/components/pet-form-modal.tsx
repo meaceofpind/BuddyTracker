@@ -7,6 +7,7 @@ import type { Pet } from "@/types";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -82,17 +83,24 @@ export function PetFormModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Pet" : "Add New Pet"}</DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? "Update your pet's information below."
+              : "Fill in the details to add a new pet."}
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4" aria-label="Pet form">
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="pet-name">Name</Label>
             <Input
-              id="name"
+              id="pet-name"
               placeholder="Enter pet name"
+              aria-invalid={!!form.formState.errors.name}
+              aria-describedby={form.formState.errors.name ? "pet-name-error" : undefined}
               {...form.register("name")}
             />
             {form.formState.errors.name && (
-              <p className="text-sm text-destructive">
+              <p id="pet-name-error" role="alert" className="text-sm text-destructive">
                 {form.formState.errors.name.message}
               </p>
             )}
@@ -100,12 +108,12 @@ export function PetFormModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="species">Species</Label>
+              <Label htmlFor="pet-species">Species</Label>
               <Select
                 value={form.watch("species")}
                 onValueChange={(value) => form.setValue("species", value, { shouldValidate: true })}
               >
-                <SelectTrigger>
+                <SelectTrigger id="pet-species" aria-label="Select species">
                   <SelectValue placeholder="Select species" />
                 </SelectTrigger>
                 <SelectContent>
@@ -117,21 +125,22 @@ export function PetFormModal({
                 </SelectContent>
               </Select>
               {form.formState.errors.species && (
-                <p className="text-sm text-destructive">
+                <p role="alert" className="text-sm text-destructive">
                   {form.formState.errors.species.message}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="breed">Breed</Label>
+              <Label htmlFor="pet-breed">Breed</Label>
               <Input
-                id="breed"
+                id="pet-breed"
                 placeholder="Enter breed"
+                aria-invalid={!!form.formState.errors.breed}
                 {...form.register("breed")}
               />
               {form.formState.errors.breed && (
-                <p className="text-sm text-destructive">
+                <p role="alert" className="text-sm text-destructive">
                   {form.formState.errors.breed.message}
                 </p>
               )}
@@ -140,12 +149,12 @@ export function PetFormModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="gender">Gender</Label>
+              <Label htmlFor="pet-gender">Gender</Label>
               <Select
                 value={form.watch("gender")}
                 onValueChange={(value) => form.setValue("gender", value, { shouldValidate: true })}
               >
-                <SelectTrigger>
+                <SelectTrigger id="pet-gender" aria-label="Select gender">
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
                 <SelectContent>
@@ -157,22 +166,23 @@ export function PetFormModal({
                 </SelectContent>
               </Select>
               {form.formState.errors.gender && (
-                <p className="text-sm text-destructive">
+                <p role="alert" className="text-sm text-destructive">
                   {form.formState.errors.gender.message}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="age">Age (years)</Label>
+              <Label htmlFor="pet-age">Age (years)</Label>
               <Input
-                id="age"
+                id="pet-age"
                 type="number"
                 min={0}
+                aria-invalid={!!form.formState.errors.age}
                 {...form.register("age")}
               />
               {form.formState.errors.age && (
-                <p className="text-sm text-destructive">
+                <p role="alert" className="text-sm text-destructive">
                   {form.formState.errors.age.message}
                 </p>
               )}

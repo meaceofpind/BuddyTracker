@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Pet } from "@/types";
 import type { TrackerListWithOptions } from "@/types";
@@ -28,9 +28,137 @@ import {
   Trash2,
   ClipboardList,
   FileText,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
+
+const LONG_PRESS_MS = 500;
+
+function TrackerCard({
+  tracker,
+  onDelete,
+}: {
+  tracker: TrackerListWithOptions;
+  onDelete: (t: TrackerListWithOptions) => void;
+}) {
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const didLongPress = useRef(false);
+
+  const handleTouchStart = useCallback(() => {
+    didLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+      setMenuOpen(true);
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, LONG_PRESS_MS);
+  }, []);
+
+  const cancelLongPress = useCallback(() => {
+    clearTimeout(longPressTimer.current);
+  }, []);
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (didLongPress.current) {
+        didLongPress.current = false;
+        e.preventDefault();
+        return;
+      }
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-dropdown-trigger]") || target.closest("[role='menu']")) {
+        return;
+      }
+      router.push(`/trackers/${tracker.id}/entries`);
+    },
+    [router, tracker.id]
+  );
+
+  return (
+    <Card
+      className="group transition-shadow hover:shadow-md cursor-pointer select-none touch-manipulation"
+      onClick={handleClick}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={cancelLongPress}
+      onTouchMove={cancelLongPress}
+      role="article"
+      aria-label={`${tracker.name} — ${tracker.options.length} field${tracker.options.length !== 1 ? "s" : ""}. Tap to view entries, long press for options.`}
+    >
+      <CardHeader className="flex flex-row items-start justify-between space-y-0">
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10"
+            aria-hidden="true"
+          >
+            <FileText className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-lg">{tracker.name}</CardTitle>
+            <CardDescription>
+              {tracker.options.length} field{tracker.options.length !== 1 ? "s" : ""}
+            </CardDescription>
+          </div>
+        </div>
+
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              data-dropdown-trigger
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+              aria-label={`Actions for ${tracker.name}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/trackers/${tracker.id}/edit`);
+              }}
+            >
+              <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+              Edit Tracker
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(tracker);
+              }}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CardHeader>
+
+      <CardContent>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {tracker.options.map((opt) => (
+            <span
+              key={opt.id}
+              className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-xs font-medium"
+            >
+              {opt.fieldName}
+              <span className="ml-1 text-muted-foreground">({opt.fieldType})</span>
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center text-sm font-medium text-primary">
+          View Entries
+          <ChevronRight className="ml-1 h-4 w-4" aria-hidden="true" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function TrackersPage() {
   const { petId } = useParams<{ petId: string }>();
@@ -72,7 +200,7 @@ export default function TrackersPage() {
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
         <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="mr-1 h-4 w-4" />
+          <ArrowLeft className="mr-1 h-4 w-4" aria-hidden="true" />
           Back to Pets
         </Link>
       </div>
@@ -88,7 +216,7 @@ export default function TrackersPage() {
         </div>
         <Link href={`/pets/${petId}/trackers/new`}>
           <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
+            <PlusCircle className="mr-2 h-4 w-4" aria-hidden="true" />
             New Tracker
           </Button>
         </Link>
@@ -102,14 +230,14 @@ export default function TrackersPage() {
         </div>
       ) : trackers.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed p-12 text-center">
-          <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
+          <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" aria-hidden="true" />
           <h2 className="text-xl font-semibold">No trackers yet</h2>
           <p className="text-muted-foreground mt-1 mb-4">
             Create a tracker to start logging entries for {pet?.name}
           </p>
           <Link href={`/pets/${petId}/trackers/new`}>
             <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
+              <PlusCircle className="mr-2 h-4 w-4" aria-hidden="true" />
               Create First Tracker
             </Button>
           </Link>
@@ -117,65 +245,11 @@ export default function TrackersPage() {
       ) : (
         <div className="grid gap-4">
           {trackers.map((tracker) => (
-            <Card key={tracker.id} className="group transition-shadow hover:shadow-md">
-              <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                    <FileText className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">{tracker.name}</CardTitle>
-                    <CardDescription>
-                      {tracker.options.length} field{tracker.options.length !== 1 ? "s" : ""}
-                    </CardDescription>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <Link href={`/trackers/${tracker.id}/edit`}>
-                      <DropdownMenuItem>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit Tracker
-                      </DropdownMenuItem>
-                    </Link>
-                    <DropdownMenuItem
-                      onClick={() => setDeletingTracker(tracker)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {tracker.options.map((opt) => (
-                    <span
-                      key={opt.id}
-                      className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-xs font-medium"
-                    >
-                      {opt.fieldName}
-                      <span className="ml-1 text-muted-foreground">({opt.fieldType})</span>
-                    </span>
-                  ))}
-                </div>
-                <Link href={`/trackers/${tracker.id}/entries`}>
-                  <Button variant="outline" className="w-full">
-                    View Entries
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+            <TrackerCard
+              key={tracker.id}
+              tracker={tracker}
+              onDelete={setDeletingTracker}
+            />
           ))}
         </div>
       )}

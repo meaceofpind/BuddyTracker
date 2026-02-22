@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { TrackerListWithOptions } from "@/types";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 export default function NewEntryPage() {
   const { trackerId } = useParams<{ trackerId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const { data: tracker, isLoading } = useQuery<TrackerListWithOptions & { pet: { petId: string; name: string } }>({
     queryKey: ["tracker", trackerId],
@@ -36,6 +37,7 @@ export default function NewEntryPage() {
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["entries", trackerId] });
       toast.success("Entry created");
       router.push(`/trackers/${trackerId}/entries`);
     },

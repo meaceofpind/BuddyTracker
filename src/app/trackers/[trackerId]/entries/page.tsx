@@ -69,12 +69,14 @@ export default function EntriesPage() {
 
     if (fieldType === "Image") {
       return (
-        <div
-          className="relative h-10 w-10 cursor-pointer overflow-hidden rounded border"
+        <button
+          type="button"
+          className="relative h-10 w-10 cursor-pointer overflow-hidden rounded border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           onClick={() => setPreviewImage(val)}
+          aria-label={`View ${fieldName} image`}
         >
-          <Image src={val} alt={fieldName} fill className="object-cover" />
-        </div>
+          <Image src={val} alt={`${fieldName} thumbnail`} fill className="object-cover" />
+        </button>
       );
     }
 
@@ -164,7 +166,7 @@ export default function EntriesPage() {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Link href={`/trackers/${trackerId}/entries/${entry.id}/edit`}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Edit entry">
                           <Pencil className="h-4 w-4" />
                         </Button>
                       </Link>
@@ -173,6 +175,7 @@ export default function EntriesPage() {
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
                         onClick={() => setDeletingEntry(entry)}
+                        aria-label="Delete entry"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

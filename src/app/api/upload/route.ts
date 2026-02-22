@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -11,18 +13,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
+    if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
         { error: "Invalid file type. Allowed: JPEG, PNG, GIF, WebP" },
         { status: 400 }
       );
     }
 
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = parseInt(process.env.MAX_UPLOAD_SIZE ?? "5242880", 10);
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: "File too large. Maximum size is 5MB" },
+        { error: `File too large. Maximum size is ${Math.round(maxSize / 1024 / 1024)}MB` },
         { status: 400 }
       );
     }
